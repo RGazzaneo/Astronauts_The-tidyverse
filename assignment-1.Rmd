@@ -1,0 +1,287 @@
+---
+title: "Assignment 1 - The tidyverse"
+author: "RGazzaneo"
+date: "`r format(Sys.time(), '%B %d, %Y | %H:%M:%S | %Z')`"
+output:
+  html_document:
+    code_folding: show
+    df_print: paged
+    highlight: tango
+    number_sections: no
+    theme: cosmo
+    toc: no
+---
+
+<style>
+div.answer {background-color:#f3f0ff; border-radius: 5px; padding: 20px;}
+div.comment {background-color:#F0F6FF; border-radius: 5px; padding: 20px;}
+
+</style>
+
+<style>
+div.gradingadvice {background-color:#a2bc89; border-radius: 5px; padding: 20px;}
+</style>
+
+<style>
+div.examplefeedback {background-color:#FFA500; border-radius: 5px; padding: 20px;}
+</style>
+
+<style>
+div.lookfor {background-color:#a389bc; border-radius: 5px; padding: 20px;}
+</style>
+
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = TRUE,
+                      error = FALSE,
+                      message = FALSE,
+                      warning = FALSE,
+                      comment = NA)
+```
+
+<!-- Do not forget to input your Github username in the YAML configuration up there --> 
+
+***
+
+
+```{r, include = T}
+data <- read.csv("astronauts.csv")
+library(ggplot2)
+```
+
+
+<br>
+
+## Getting started with the Astronaut Database
+
+The data this week comes from [Mariya Stavnichuk and Tatsuya Corlett](https://data.mendeley.com/datasets/86tsnnbv2w/1). 
+
+This [article](https://www.sciencedirect.com/science/article/abs/pii/S2214552420300444) talks about the data set in greater detail.
+
+> This database contains publically available information about all astronauts who participated in space missions before 15 January 2020 collected from NASA, Roscosmos, and fun-made websites. The provided information includes full astronaut name, sex, date of birth, nationality, military status, a title and year of a selection program, and information about each mission completed by a particular astronaut such as a year, ascend and descend shuttle names, mission and extravehicular activity (EVAs) durations.
+
+Credit for preparing the data set: [Georgios Karamanis](https://twitter.com/geokaramanis)
+
+You can use the data set directly by importing the csv file in the repository.
+
+---
+
+If not noted otherwise, for the following tasks, you will work only with a subset of astronauts based on their **year of birth**. The year span you are assigned depends on your first name:
+
+| Your first name starts with... | Years of birth |
+|---------|-------|
+| A-I | (1921-1942] |
+| J-R | (1943-1964] |
+| S-Z | (1965-1983] |
+
+<br>
+
+***
+
+### Task 1 - Descriptives
+
+a) How many unique astronauts were there in the full data set and how many are there in your subset? (*Note that some might have been part of multiple missions.*)
+
+```{r}
+# YOUR CODE HERE
+
+# Unique Astronauts with the full data set
+unique_entries_all <- length(unique(data$name))
+# Create subset (1943-1964]
+subset_1943_1964 <- subset(data, year_of_birth > 1943 & year_of_birth <= 1964)
+# Unique Astronauts with the subset
+unique_entries_subset <- length(unique(subset_1943_1964$name))
+print(paste("Answer:" , unique_entries_subset))
+```
+
+
+b) What is the overall share of female astronauts in the subset of data you were assigned to?
+
+```{r}
+# YOUR CODE HERE
+
+#Number of female in the filtered subset
+number_female <- length(unique(subset_1943_1964[subset_1943_1964$sex == 'female', ]$name))
+#Overall Share
+female_share <- number_female/unique_entries_subset
+print(paste("Answer:" , female_share))
+```
+
+<br>
+
+c) How many (both in absolute and relative terms) astronauts were U.S. nationals in your subset? 
+
+```{r}
+# YOUR CODE HERE
+
+#absolute number of US astronauts
+number_us <- length(unique(subset_1943_1964[subset_1943_1964$nationality == 'U.S.', ]$name))
+#relative number of US astronauts
+percent_us <- number_us*100/unique_entries_subset
+percent_values <- sprintf("%.2f%%", percent_us)
+cat(" Answer in absolut terms:" , number_us, "\n", "Answer in relative terms:" , percent_values)
+
+```
+
+
+<br>
+
+d) Create a new data set `total_hours_df` containing the unique names and the total duration of all missions in hours (`total_hrs_sum`) for each astronaut in the subset. Then, visualize the distribution of that variable using an appropriate plot type.
+
+```{r}
+# YOUR CODE HERE
+
+#creating dataset
+total_hours_df <- aggregate(hours_mission ~ name, data = subset_1943_1964, FUN = sum)
+#renaming column b
+names(total_hours_df)[names(total_hours_df) == "hours_mission"] <- "total_hrs_sum"
+print("Check table total_hours_df")
+#create Histogram of the distribution
+ggplot(total_hours_df, aes(x = total_hrs_sum)) +
+  geom_histogram(binwidth = 10, fill = "blue", color = "black") +
+  labs(title = "Distribution of Total Mission Hours by Astronaut",
+       x = "Total Mission Hours", 
+       y = "Frequency")
+
+```
+
+
+<br>
+
+e) Who were the top 10 astronauts that went in the most unique missions in your subset? (*Note: There might be ties, so only print the default top 10.*)
+
+```{r}
+# YOUR CODE HERE
+
+#aggregate per number of missions
+mission_top10 <- aggregate(hours_mission ~ name, data = subset_1943_1964, FUN = length)
+#rename colunm b
+names(mission_top10)[2] <- "mission_count"
+#order to select top10
+mission_top10 <- mission_top10[order(-mission_top10$mission_count), ][1:10, ]
+print(mission_top10)
+
+```
+
+<br>
+
+
+f) Generate a table that provides the 5 astronauts with the longest names (in terms of number of characters, ignoring whitespace).
+
+```{r}
+# YOUR CODE HERE
+
+#remove name repetition
+name_top5 <- subset_1943_1964[!duplicated(subset_1943_1964$name), ]
+#remove whitespace
+name_top5$clean_name <- gsub(" ", "", name_top5$name)
+#length of each name
+name_top5$name_length <- nchar(name_top5$clean_name)
+#order to select top5
+name_top5 <- name_top5[order(-name_top5$name_length), ][1:5, c("name", "name_length")]
+print(name_top5)
+
+```
+
+
+<br>
+
+***
+
+### Task 2 - Exploring trends in the data
+
+a) Using the full data set, provide a plot that shows the overall share of *civilian* astronauts by the year of mission!
+
+```{r}
+# YOUR CODE HERE
+
+#filtering for civilians
+civilians <- data[data$military_civilian == "civilian", ]
+#number of civilian and total astronauts per year
+total_counts <- aggregate(military_civilian ~ year_of_mission, data = data, FUN = length)
+civilian_counts <- aggregate(military_civilian ~ year_of_mission, data = civilians, FUN = length)
+#rename columns
+names(total_counts)[2] <- "total_astronauts"
+names(civilian_counts)[2] <- "civilian_astronauts"
+#merge by year_of_mission
+merged_counts <- merge(total_counts, civilian_counts, by = "year_of_mission", all.x = TRUE)
+merged_counts$civilian_astronauts[is.na(merged_counts$civilian_astronauts)] <- 0
+#share of civilian astronauts
+merged_counts$civilian_share <- (merged_counts$civilian_astronauts / merged_counts$total_astronauts) * 100
+
+ggplot(merged_counts, aes(x = year_of_mission, y = civilian_share)) +
+  geom_line(color = "blue") +
+  geom_point(color = "blue") +
+  labs(title = "Share of Civilian Astronauts by Year of Mission",
+       x = "Year of Mission",
+       y = "Share of Civilian Astronauts (%)") +
+  theme_minimal()
+
+
+```
+
+<br>
+
+b) Explore another relation of variables in the data set. Your analysis should (i) *use the full data set* and (ii) feature *data from several years*. Also, offer a brief description and interpretation of your findings!
+
+```{r}
+
+#filtering
+females <- data[data$sex == "female", ]
+total_counts <- aggregate(sex ~ year_of_mission, data = data, FUN = length)
+female_counts <- aggregate(sex ~ year_of_mission, data = females, FUN = length)
+names(total_counts)[2] <- "total_astronauts"
+names(female_counts)[2] <- "female_astronauts"
+# calculating shares
+years <- unique(total_counts$year_of_mission)
+female_counts$year_of_mission <- as.numeric(as.character(female_counts$year_of_mission))
+total_counts$year_of_mission <- as.numeric(as.character(total_counts$year_of_mission)) 
+#populate table
+total_counts$female_astronauts <- 0
+total_counts$female_astronauts[match(female_counts$year_of_mission, total_counts$year_of_mission)] <- female_counts$female_astronauts
+total_counts$female_astronauts[is.na(total_counts$female_astronauts)] <- 0
+#calculating share
+total_counts$female_share <- (total_counts$female_astronauts / total_counts$total_astronauts) * 100
+
+ggplot(total_counts, aes(x = year_of_mission, y = female_share)) +
+  geom_line(color = "purple") +
+  geom_point(color = "purple") +
+  labs(title = "Share of Female Astronauts by Year",
+       x = "Year of Mission",
+       y = "Share of Female Astronauts (%)") +
+  theme_minimal()
+ 
+#discarding data before 1980
+total_counts2 <- subset(total_counts, year_of_mission > 1980)
+#recalculating female share
+total_counts2$female_share <- (total_counts2$female_astronauts / total_counts2$total_astronauts) * 100
+
+plot <- ggplot(total_counts2, aes(x = year_of_mission, y = female_share)) +
+  geom_line(color = "purple") +
+  geom_point(color = "purple") +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(title = "Share of Female Astronauts by Year",
+       x = "Year of Mission",
+       y = "Share of Female Astronauts (%)") +
+  theme_minimal()
+print(plot)
+
+
+
+```
+
+::: answer
+
+Using the full data set, we can see a plot that shows the overall share of female astronauts by the year of mission, after analysis the year of 1963 was considered an outlier and the years before 1981 were discarded in order to trace a trend line for the more relevant years.
+
+By observing the trend line, it is possible to notice that although it has been variations in the share of woman in mission since 1980, the percentage has slightly increased throughout the years.
+
+Therefore we can interpreted that the participation of female astronauts in mission tends to increase, even though still minor (around 20%).
+
+:::
+
+
+<br>
+
+
